@@ -256,6 +256,12 @@ func (conn *BridgeConnector) convertFromNatsToKafkaHeaders(hdr nats.Header) []sa
 	return []sarama.RecordHeader{} // empty header by default
 }
 
+func convertFromNatsToKafkaHeadersWithSubject(conn *BridgeConnector, hdr nats.Header, subject string) []sarama.RecordHeader {
+	headers := conn.convertFromNatsToKafkaHeaders(hdr)
+	headers = append(headers, sarama.RecordHeader{Key: []byte("subject"), Value: []byte(subject)})
+	return headers
+}
+
 // set up a nats subscription, assumes the lock is held
 func (conn *BridgeConnector) subscribeToNATS(subject string, queueName string) (*nats.Subscription, error) {
 	traceEnabled := conn.bridge.Logger().TraceEnabled()
@@ -401,7 +407,7 @@ func (conn *BridgeConnector) subscribeToJetStream(subject string, queueName stri
 		err := conn.writer(msg).Write(kafka.Message{
 			Key:     key,
 			Value:   msg.Data,
-			Headers: conn.convertFromNatsToKafkaHeaders(msg.Header),
+			Headers: convertFromNatsToKafkaHeadersWithSubject(conn, msg.Header, msg.Subject),
 		})
 
 		if err != nil {
