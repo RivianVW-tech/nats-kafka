@@ -50,6 +50,7 @@ type ConnectorStats struct {
 	Quintile75    float64 `json:"q75"`
 	Quintile90    float64 `json:"q90"`
 	Quintile95    float64 `json:"q95"`
+	NumPending    uint64  `json:"num_pending"`
 }
 
 // ConnectorStatsHolder provides a lock and histogram
@@ -142,6 +143,21 @@ func (stats *ConnectorStatsHolder) AddRequest(bytesIn int64, bytesOut int64, req
 	stats.stats.RequestCount++
 	stats.stats.MovingAverage = ((float64(stats.stats.RequestCount-1) * stats.stats.MovingAverage) + reqns) / float64(stats.stats.RequestCount)
 	stats.histogram.Add(reqns)
+	stats.Unlock()
+}
+
+// AddStreamRequest groups addMessageIn, addMessageOut, addRequest time and num pending into a single call to reduce locking requirements.
+func (stats *ConnectorStatsHolder) AddStreamRequest(bytesIn int64, bytesOut int64, reqTime time.Duration, numPending uint64) {
+	stats.Lock()
+	stats.stats.MessagesIn++
+	stats.stats.BytesIn += bytesIn
+	stats.stats.MessagesOut++
+	stats.stats.BytesOut += bytesOut
+	reqns := float64(reqTime.Nanoseconds())
+	stats.stats.RequestCount++
+	stats.stats.MovingAverage = ((float64(stats.stats.RequestCount-1) * stats.stats.MovingAverage) + reqns) / float64(stats.stats.RequestCount)
+	stats.histogram.Add(reqns)
+	stats.stats.NumPending = numPending
 	stats.Unlock()
 }
 
