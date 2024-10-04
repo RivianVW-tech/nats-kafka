@@ -149,10 +149,10 @@ type HTTPConfig struct {
 
 // NATSConfig configuration for a NATS connection
 type NATSConfig struct {
-	Servers []string
-
-	ConnectTimeout int // milliseconds
-	ReconnectWait  int // milliseconds
+	Servers        []string
+	ClientName     string // optional client name
+	ConnectTimeout int    // milliseconds
+	ReconnectWait  int    // milliseconds
 	MaxReconnects  int
 
 	TLS             TLSConf
@@ -197,6 +197,7 @@ func DefaultBridgeConfig() NATSKafkaBridgeConfig {
 			WriteTimeout: 5000,
 		},
 		NATS: NATSConfig{
+			ClientName:     "NATS Kafka Bridge",
 			ConnectTimeout: 5000,
 			ReconnectWait:  1000,
 			MaxReconnects:  0,

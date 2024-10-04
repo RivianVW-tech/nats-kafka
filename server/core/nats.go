@@ -85,6 +85,7 @@ func (server *NATSKafkaBridge) connectToNATS() error {
 
 	config := server.config.NATS
 	options := []nats.Option{
+		nats.Name(config.ClientName),
 		nats.MaxReconnects(config.MaxReconnects),
 		nats.ReconnectWait(time.Duration(config.ReconnectWait) * time.Millisecond),
 		nats.Timeout(time.Duration(config.ConnectTimeout) * time.Millisecond),
