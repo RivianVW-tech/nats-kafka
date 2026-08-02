@@ -256,6 +256,26 @@ func (conn *BridgeConnector) convertFromNatsToKafkaHeaders(hdr nats.Header) []sa
 	return []sarama.RecordHeader{} // empty header by default
 }
 
+func convertFromNatsToKafkaHeadersWithMetaData(conn *BridgeConnector, msg *nats.Msg) []sarama.RecordHeader {
+	metaMap := make(map[string]string)
+	metaMap["subject"] = msg.Subject
+	metaData, err := msg.Metadata()
+
+	if err == nil {
+		// only non stream message will result into error
+		metaMap["num_pending"] = fmt.Sprintf("%d", metaData.NumPending)
+		metaMap["timestamp"] = metaData.Timestamp.UTC().String()
+		metaMap["stream_seq"] = fmt.Sprintf("%d", metaData.Sequence.Stream)
+		metaMap["consumer_seq"] = fmt.Sprintf("%d", metaData.Sequence.Consumer)
+	}
+
+	headers := conn.convertFromNatsToKafkaHeaders(msg.Header)
+	for key := range metaMap {
+		headers = append(headers, sarama.RecordHeader{Key: []byte(key), Value: []byte(metaMap[key])})
+	}
+	return headers
+}
+
 // set up a nats subscription, assumes the lock is held
 func (conn *BridgeConnector) subscribeToNATS(subject string, queueName string) (*nats.Subscription, error) {
 	traceEnabled := conn.bridge.Logger().TraceEnabled()
@@ -401,7 +421,7 @@ func (conn *BridgeConnector) subscribeToJetStream(subject string, queueName stri
 		err := conn.writer(msg).Write(kafka.Message{
 			Key:     key,
 			Value:   msg.Data,
-			Headers: conn.convertFromNatsToKafkaHeaders(msg.Header),
+			Headers: convertFromNatsToKafkaHeadersWithMetaData(conn, msg),
 		})
 
 		if err != nil {
@@ -419,7 +439,9 @@ func (conn *BridgeConnector) subscribeToJetStream(subject string, queueName stri
 			if traceEnabled {
 				conn.bridge.Logger().Tracef("%s acked message to kafka", conn.String())
 			}
-			conn.stats.AddRequest(l, l, time.Since(start))
+
+			metaData, _ := msg.Metadata()
+			conn.stats.AddStreamRequest(l, l, time.Since(start), metaData.NumPending)
 		}
 	}
 
