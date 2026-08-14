@@ -41,7 +41,8 @@ Notes:
 
 ## Architecture
 
-The bridge (`server/core/server.go`, `NATSKafkaBridge`) owns one shared NATS connection, an optional STAN connection, and a JetStream context.
+The bridge (`server/core/server.go`, `NATSKafkaBridge`) owns one NATS connection per configured cluster (cell), an optional STAN connection (default cluster only), and a JetStream context per cluster that needs one.
+The default cluster comes from the `nats` config block; additional named clusters come from the optional `natsclusters` list, and connectors select one with `natsconnection` (see `server/core/nats.go`, `natsCell`).
 Each connector creates its own Kafka connection.
 
 **Connectors** are the central abstraction (`server/core/connector.go`, `Connector` interface: Start, Shutdown, CheckConnections, Stats).
