@@ -8,7 +8,7 @@ The environment is defined in `resources/local_multicell.yml` and consists of:
 | Service | Address | Notes |
 | --- | --- | --- |
 | Zookeeper | internal only | reachable by Kafka as zookeeper:2181, no host port |
-| Kafka | localhost:9092 | plaintext listener, topic auto-create enabled |
+| Kafka | localhost:9192 | plaintext listener, topic auto-create enabled |
 | NATS cell-a | localhost:4222 | JetStream enabled, monitoring on localhost:8222 |
 | NATS cell-b | localhost:4223 | JetStream enabled, monitoring on localhost:8223 |
 
@@ -63,10 +63,10 @@ It runs two `JetStreamToKafka` connectors, one against each cell, both writing t
 
    ```bash
    docker exec -it nats_kafka_multicell-kafka-1 /opt/kafka/bin/kafka-console-consumer.sh \
-     --bootstrap-server localhost:9092 --topic brand.telemetry --from-beginning
+     --bootstrap-server localhost:9192 --topic brand.telemetry --from-beginning
    ```
 
-   Alternatively use `kcat -b localhost:9092 -t brand.telemetry -C` from the host.
+   Alternatively use `kcat -b localhost:9192 -t brand.telemetry -C` from the host.
 
 5. In a third terminal, publish one message into each cell:
 

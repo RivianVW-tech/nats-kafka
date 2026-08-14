@@ -5,15 +5,17 @@ services:
     image: wurstmeister/zookeeper
   kafka:
     image: wurstmeister/kafka
+    # Host port 9192 keeps this environment clear of the integration-test
+    # servers (resources/test_servers.yml) and anything else on 9092.
     ports:
-      - "9092:9092"
+      - "9192:9192"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_ADVERTISED_HOST_NAME: localhost
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9192
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9192
   nats-cell-a:
     image: nats:2.10-alpine
     command: ["-js", "-m", "8222", "--server_name", "cell-a"]
