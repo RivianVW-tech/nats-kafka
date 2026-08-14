@@ -29,6 +29,20 @@ type BridgeStats struct {
 	RequestCount int64            `json:"request_count"`
 	Connections  []ConnectorStats `json:"connectors"`
 	HTTPRequests map[string]int64 `json:"http_requests"`
+	NATS         *NATSConnStats   `json:"nats,omitempty"`
+}
+
+// NATSConnStats captures wire-level statistics for the bridge's shared
+// NATS connection, as reported by the NATS client library. STAN traffic
+// flows over the same connection and is included in these numbers.
+type NATSConnStats struct {
+	Connected    bool   `json:"connected"`
+	ConnectedURL string `json:"connected_url,omitempty"`
+	Reconnects   uint64 `json:"reconnects"`
+	InMsgs       uint64 `json:"in_msgs"`
+	OutMsgs      uint64 `json:"out_msgs"`
+	InBytes      uint64 `json:"in_bytes"`
+	OutBytes     uint64 `json:"out_bytes"`
 }
 
 // ConnectorStats captures the statistics for a single connector
