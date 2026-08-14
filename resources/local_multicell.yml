@@ -1,4 +1,3 @@
-version: '2'
 services:
   zookeeper:
     # Only Kafka talks to Zookeeper, over the compose network; no host port
