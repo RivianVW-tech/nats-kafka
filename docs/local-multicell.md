@@ -7,7 +7,7 @@ The environment is defined in `resources/local_multicell.yml` and consists of:
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| Zookeeper | localhost:2181 | |
+| Zookeeper | internal only | reachable by Kafka as zookeeper:2181, no host port |
 | Kafka | localhost:9092 | plaintext listener, topic auto-create enabled |
 | NATS cell-a | localhost:4222 | JetStream enabled, monitoring on localhost:8222 |
 | NATS cell-b | localhost:4223 | JetStream enabled, monitoring on localhost:8223 |

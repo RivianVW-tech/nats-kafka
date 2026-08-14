@@ -1,9 +1,9 @@
 version: '2'
 services:
   zookeeper:
+    # Only Kafka talks to Zookeeper, over the compose network; no host port
+    # is published so a busy local 2181 cannot break the environment.
     image: wurstmeister/zookeeper
-    ports:
-      - "2181:2181"
   kafka:
     image: wurstmeister/kafka
     ports:
