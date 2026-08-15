@@ -121,22 +121,37 @@ Alternatively use `kcat -b localhost:9192 -t brand.telemetry -C` from the host.
 
 ### 5. Publish messages into both cells
 
-In a third terminal, either publish single messages by hand:
+Publishing goes to a cell's NATS server on any subject matching `telemetry.>`.
+The cell's `TELEMETRY` stream captures the message, and the connector for that cell bridges it to the `brand.telemetry` Kafka topic.
+Cell-a listens on `nats://localhost:4222` and cell-b on `nats://localhost:4223`.
+
+#### Natively with the nats CLI
+
+In a third terminal, publish one message into each cell:
 
 ```bash
-nats -s nats://localhost:4222 pub telemetry.test.carA "hello-from-cell-a"
-nats -s nats://localhost:4223 pub telemetry.test.carB "hello-from-cell-b"
+nats -s nats://localhost:4222 pub telemetry.test.carA '{"car_id":"carA","msg":"hello-from-cell-a"}'
+nats -s nats://localhost:4223 pub telemetry.test.carB '{"car_id":"carB","msg":"hello-from-cell-b"}'
 ```
 
-Or use the bundled generator, which publishes randomized JSON telemetry to a random cell per message:
+The payload is opaque to the bridge, so any string works; JSON is used here because downstream consumers usually expect it.
+The subject can be anything under `telemetry.>`, for example `telemetry.dummy.car-7` or `telemetry.test.vin123`.
+
+#### With the bundled generator
+
+`resources/publish_dummy_telemetry.sh` publishes randomized JSON telemetry, picking a random cell, car, and payload for each message:
 
 ```bash
 resources/publish_dummy_telemetry.sh            # 20 messages, 0.2s apart
-resources/publish_dummy_telemetry.sh 100 0.05   # count and interval overrides
+resources/publish_dummy_telemetry.sh 100 0.05   # 100 messages, 0.05s apart
 ```
 
-Each payload carries a `source_cell` field, so the Kafka consumer output shows that both cells reach the topic.
-All messages must appear on the Kafka consumer.
+The first argument is the message count (default 20).
+The second argument is the sleep between messages in seconds, fractional values allowed (default 0.2).
+Each payload carries `car_id`, `source_cell`, `seq`, `speed_kph`, `soc_pct`, and a `ts` timestamp.
+The `source_cell` field makes it visible on the Kafka consumer that both cells reach the topic.
+
+All published messages must appear on the Kafka consumer from step 4.
 
 To confirm the output topic exists and to inspect it:
 
