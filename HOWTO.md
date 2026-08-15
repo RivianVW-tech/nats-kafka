@@ -95,7 +95,22 @@ The startup log should show connections to clusters `default` and `cell-b`, and 
 
 ### 4. Start a Kafka consumer
 
-In a second terminal:
+In a second terminal, use the bundled Kafka helper to follow the output topic:
+
+```bash
+resources/local_kafka.sh read        # follow brand.telemetry from the beginning, Ctrl-C to stop
+resources/local_kafka.sh read 10     # or exit after 10 messages
+```
+
+The same helper inspects the topic:
+
+```bash
+resources/local_kafka.sh list        # list all topics
+resources/local_kafka.sh describe    # partitions and replication of brand.telemetry
+```
+
+Set `TOPIC=<name>` to point the helper at a different topic.
+Without the helper, the equivalent raw commands are:
 
 ```bash
 docker exec -it nats_kafka_multicell-kafka-1 /opt/kafka/bin/kafka-console-consumer.sh \
@@ -126,8 +141,8 @@ All messages must appear on the Kafka consumer.
 To confirm the output topic exists and to inspect it:
 
 ```bash
-docker exec nats_kafka_multicell-kafka-1 /opt/kafka/bin/kafka-topics.sh \
-  --list --bootstrap-server localhost:9192
+resources/local_kafka.sh list
+resources/local_kafka.sh describe
 ```
 
 The topic is auto-created on the first bridged message, so it only appears after something was published.
