@@ -104,16 +104,35 @@ docker exec -it nats_kafka_multicell-kafka-1 /opt/kafka/bin/kafka-console-consum
 
 Alternatively use `kcat -b localhost:9192 -t brand.telemetry -C` from the host.
 
-### 5. Publish one message into each cell
+### 5. Publish messages into both cells
 
-In a third terminal:
+In a third terminal, either publish single messages by hand:
 
 ```bash
 nats -s nats://localhost:4222 pub telemetry.test.carA "hello-from-cell-a"
 nats -s nats://localhost:4223 pub telemetry.test.carB "hello-from-cell-b"
 ```
 
-Both messages must appear on the Kafka consumer.
+Or use the bundled generator, which publishes randomized JSON telemetry to a random cell per message:
+
+```bash
+resources/publish_dummy_telemetry.sh            # 20 messages, 0.2s apart
+resources/publish_dummy_telemetry.sh 100 0.05   # count and interval overrides
+```
+
+Each payload carries a `source_cell` field, so the Kafka consumer output shows that both cells reach the topic.
+All messages must appear on the Kafka consumer.
+
+To confirm the output topic exists and to inspect it:
+
+```bash
+docker exec nats_kafka_multicell-kafka-1 /opt/kafka/bin/kafka-topics.sh \
+  --list --bootstrap-server localhost:9192
+```
+
+The topic is auto-created on the first bridged message, so it only appears after something was published.
+The topic name `brand.telemetry` exists only in `conf/nats-kafka-multicell-local.conf`.
+Production topic names are generated in the deployment repo and are not affected by anything in this environment.
 
 ### 6. Check monitoring
 
