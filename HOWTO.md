@@ -29,7 +29,7 @@ The environment is defined in `resources/local_multicell.yml` and started with `
 | Service | Address | Notes |
 | --- | --- | --- |
 | Zookeeper | internal only | reachable by Kafka as zookeeper:2181, no host port |
-| Kafka | localhost:9192 | plaintext listener, topic auto-create enabled |
+| Kafka | localhost:9192 | plaintext listener, brand.telemetry pre-created with 4 partitions |
 | NATS cell-a | localhost:4222 | JetStream enabled, monitoring on localhost:8222 |
 | NATS cell-b | localhost:4223 | JetStream enabled, monitoring on localhost:8223 |
 | Bridge monitoring | localhost:9222 | served by the bridge process on the host, not by docker |
@@ -175,7 +175,7 @@ resources/local_kafka.sh list
 resources/local_kafka.sh describe
 ```
 
-The topic is auto-created on the first bridged message, so it only appears after something was published.
+The topic is pre-created with 4 partitions when the environment starts (`KAFKA_CREATE_TOPICS` in `resources/local_multicell.yml`), and the connectors use `balancer: "leastbytes"` so produce spreads across all partitions.
 The topic name `brand.telemetry` exists only in `conf/nats-kafka-multicell-local.conf`.
 Production topic names are generated in the deployment repo and are not affected by anything in this environment.
 

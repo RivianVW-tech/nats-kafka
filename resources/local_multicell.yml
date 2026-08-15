@@ -12,6 +12,9 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      # pre-create the bridge output topic with 4 partitions; auto-create
+      # would otherwise make it with 1 on first produce
+      KAFKA_CREATE_TOPICS: "brand.telemetry:4:1"
       KAFKA_ADVERTISED_HOST_NAME: localhost
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://:9192
