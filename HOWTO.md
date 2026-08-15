@@ -151,6 +151,21 @@ The second argument is the sleep between messages in seconds, fractional values 
 Each payload carries `car_id`, `source_cell`, `seq`, `speed_kph`, `soc_pct`, and a `ts` timestamp.
 The `source_cell` field makes it visible on the Kafka consumer that both cells reach the topic.
 
+Dummy mode spawns one nats CLI process per message, which caps it at a few dozen messages per second regardless of the interval.
+For throughput testing use bench mode, which drives both cells concurrently over persistent connections via `nats bench pub`:
+
+```bash
+resources/publish_dummy_telemetry.sh bench                # 100k msgs per cell, 256B each
+resources/publish_dummy_telemetry.sh bench 260000 1KB 2   # msgs per cell, size, clients per subject
+```
+
+Bench mode partitions the subject space: cell-a receives `telemetry.a.bench` through `telemetry.m.bench` and cell-b receives `telemetry.n.bench` through `telemetry.z.bench`, with the per-cell message budget split evenly across the 13 subjects and one publisher process per subject.
+This spread also provides ready-made subject ranges for experimenting with multiple filtered connectors per cell.
+The bench payload is an opaque test pattern, not JSON.
+
+Bench mode uses core NATS publishes, which have no flow control: at very high rates JetStream ingestion can silently drop messages.
+After a run, compare `nats stream info TELEMETRY` message counts against what was published; if they fall short, lower the rate or the client count.
+
 All published messages must appear on the Kafka consumer from step 4.
 
 To confirm the output topic exists and to inspect it:
