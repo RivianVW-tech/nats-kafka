@@ -223,14 +223,51 @@ A missing stream is fatal at startup but tolerated at runtime, as described in s
 On Apple Silicon it runs under emulation and docker prints a platform warning.
 This is harmless; the same image is used by the repo's integration-test servers.
 
-## Relationship to the automated tests
+## Running the integration tests end to end locally
 
-The multicell integration tests (`server/core/multicell_test.go`) cover the same flows using embedded in-process NATS servers, so they only need the docker Kafka from `make setup-docker-test`:
+Most tests in this repository are integration tests that need live Kafka, Zookeeper, and NATS servers.
+The docker environment for them is separate from the multicell environment above: it comes from `resources/test_servers.yml`, runs under the compose project `nats_kafka_test`, and publishes Kafka on host ports 9092-9094 and Zookeeper on 2181.
+Both environments can run at the same time because the multicell environment uses different host ports.
+
+The one-shot full cycle, which starts the servers, runs the tests, and tears the servers down:
 
 ```bash
-make setup-docker-test
-go test -count=1 -race -run TestMultiCell ./server/core/...
-make teardown-docker-test
+make test            # with -short, skips tests known to be flaky
+make test-failfast   # full set without -short, stops at the first failure
+make test-cover      # like make test, plus an HTML coverage report
 ```
 
+When iterating, keep the servers up and run the tests separately:
+
+```bash
+make setup-docker-test     # start Kafka, Zookeeper, and wait for readiness
+make run-test              # go test -count=1 -timeout 5m -short -race ./...
+make teardown-docker-test  # stop the servers when done
+```
+
+Run a single test while the servers are up:
+
+```bash
+go test -count=1 -race -run TestSimpleSendOnNatsReceiveOnKafka ./server/core/...
+```
+
+The multicell integration tests (`server/core/multicell_test.go`) cover the same flows as this guide using embedded in-process NATS servers, so they only need the docker Kafka:
+
+```bash
+go test -count=1 -race -run TestMultiCell ./server/core/...
+```
+
+Lint runs without any servers:
+
+```bash
+make install-tools   # once, installs staticcheck, misspell, goimports
+make lint
+```
+
+Known baseline: a small number of JetStream tests in `server/core` fail even on a clean main checkout.
+Before treating a failure as a regression, confirm it also fails on main.
+
+## Relationship between this guide and the automated tests
+
 This guide exists for manual validation of the real binary, config file format, and runtime behavior against out-of-process servers.
+The automated tests cover the same logic in-process and are what CI runs (`make lint` and `make test-codecov` on Go 1.25.x).
