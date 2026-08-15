@@ -34,10 +34,13 @@
 #   telemetry.n.bench through telemetry.z.bench, one publisher process
 #   per subject.
 #
-#     resources/publish_dummy_telemetry.sh bench [msgs-per-cell] [size] [clients-per-subject]
-#       msgs-per-cell       messages per cell, split across 13 subjects (default 100000)
+#     resources/publish_dummy_telemetry.sh bench [msgs-per-cell] [size] [clients-per-subject] [subjects-per-cell]
+#       msgs-per-cell       messages per cell, split across the subjects (default 100000)
 #       size                message size, e.g. 256B or 1KB (default 256B)
 #       clients-per-subject concurrent publishers per subject (default 1)
+#       subjects-per-cell   how many letters per cell to publish to, 1-13 (default 13);
+#                           use 4 with conf/nats-kafka-multicell-scale.conf so every
+#                           bench subject has a consumer
 
 set -euo pipefail
 
@@ -53,17 +56,24 @@ if [ "${1:-}" = "bench" ]; then
   MSGS="${2:-100000}"
   SIZE="${3:-256B}"
   CLIENTS="${4:-1}"
+  SUBJECTS="${5:-13}"
+  if [ "$SUBJECTS" -lt 1 ] || [ "$SUBJECTS" -gt 13 ]; then
+    echo "error: subjects-per-cell must be between 1 and 13" >&2
+    exit 1
+  fi
 
   # subject partition: first-level token a-m goes to cell-a, n-z to cell-b
   CELL_A_LETTERS=(a b c d e f g h i j k l m)
   CELL_B_LETTERS=(n o p q r s t u v w x y z)
-  per_subject=$((MSGS / ${#CELL_A_LETTERS[@]}))
+  CELL_A_LETTERS=("${CELL_A_LETTERS[@]:0:$SUBJECTS}")
+  CELL_B_LETTERS=("${CELL_B_LETTERS[@]:0:$SUBJECTS}")
+  per_subject=$((MSGS / SUBJECTS))
   if [ "$per_subject" -lt 1 ]; then per_subject=1; fi
-  total_per_cell=$((per_subject * ${#CELL_A_LETTERS[@]}))
+  total_per_cell=$((per_subject * SUBJECTS))
 
-  echo "benchmarking: ${total_per_cell} msgs per cell (${per_subject} x 13 subjects), ${SIZE} each, ${CLIENTS} client(s) per subject"
-  echo "cell-a: telemetry.a.bench .. telemetry.m.bench"
-  echo "cell-b: telemetry.n.bench .. telemetry.z.bench"
+  echo "benchmarking: ${total_per_cell} msgs per cell (${per_subject} x ${SUBJECTS} subjects), ${SIZE} each, ${CLIENTS} client(s) per subject"
+  echo "cell-a: telemetry.${CELL_A_LETTERS[0]}.bench .. telemetry.${CELL_A_LETTERS[$((SUBJECTS - 1))]}.bench"
+  echo "cell-b: telemetry.${CELL_B_LETTERS[0]}.bench .. telemetry.${CELL_B_LETTERS[$((SUBJECTS - 1))]}.bench"
 
   start=$(date +%s)
   pids=()

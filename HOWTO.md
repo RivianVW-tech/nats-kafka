@@ -243,18 +243,20 @@ This is harmless; the same image is used by the repo's integration-test servers.
 Each connector delivers to Kafka synchronously, one message at a time, so per-connector throughput is capped by the Kafka produce round-trip (roughly 1.5k msgs/s locally).
 Aggregate throughput scales with connector count.
 
-`conf/nats-kafka-multicell-scale.conf` is a scale-out variant of the local config: 26 filtered connectors, one per bench subject letter (`telemetry.a.>` through `telemetry.m.>` on cell-a, `telemetry.n.>` through `telemetry.z.>` on cell-b), all with `balancer: "leastbytes"`.
+`conf/nats-kafka-multicell-scale.conf` is a scale-out variant of the local config: 8 filtered connectors, four per cell (`telemetry.a.>` through `telemetry.d.>` on cell-a, `telemetry.n.>` through `telemetry.q.>` on cell-b), all with `balancer: "leastbytes"`.
 Its monitoring port is 9223, so its dashboard is at `http://localhost:9223/dashboard`.
 Run only one bridge at a time; two bridges consume the streams independently and double-write the topic.
 
+Pass `4` as the bench publisher's subjects-per-cell argument so every bench subject has a consumer:
+
 ```bash
 ./nats-kafka -c conf/nats-kafka-multicell-scale.conf
-resources/publish_dummy_telemetry.sh bench 130000 256B
+resources/publish_dummy_telemetry.sh bench 100000 256B 1 4
 curl -s localhost:9223/varz | jq '[.connectors[].msg_out] | add'
 ```
 
-Measured on a laptop against the single-broker docker Kafka: the 2-connector config drains at about 2.9k msgs/s, the 26-connector config at about 7.5k msgs/s.
-Scaling is sub-linear because all connectors share one broker and the synchronous produce path; per-connector rates drop as concurrency grows.
+Measured on a laptop against the single-broker docker Kafka: the 2-connector config drains at about 2.9k msgs/s, and a 26-connector run peaked around 7.5k msgs/s before being scaled back.
+Scaling is sub-linear because all connectors share one broker and the synchronous produce path, and every connector costs a JetStream consumer plus a Kafka producer connection; 26 connectors overwhelmed a Rancher Desktop docker VM, which is why the config ships with 8.
 Raising single-connector throughput further requires an async or batched producer in `server/kafka/producer.go`, which is a code change with delivery-guarantee implications.
 
 ## Running the integration tests end to end locally
