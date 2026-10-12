@@ -222,6 +222,54 @@ func TestMultiCellUnreachableCellAtStartup(t *testing.T) {
 	require.Equal(t, []string{"default-cell-works"}, received)
 }
 
+func TestMultiCellMisconfiguredConnectorOnReachableCell(t *testing.T) {
+	subject := nuid.Next()
+	topic := nuid.Next()
+
+	connect := []conf.ConnectorConfig{
+		{
+			Type:    "JetStreamToKafka",
+			Subject: subject,
+			Topic:   topic,
+		},
+		{
+			// the second cell is reachable, but the connector binds a stream
+			// that does not exist there, e.g. a wrong cell id in its name
+			Type:           "JetStreamToKafka",
+			NATSConnection: TestCellName,
+			Subject:        subject,
+			Topic:          topic,
+			Stream:         "no-such-stream",
+		},
+	}
+
+	// the bridge must start and keep the default cell's connector working
+	tbs, err := StartTwoCellTestEnvironment(connect)
+	require.NoError(t, err)
+	defer tbs.Close()
+
+	stats := tbs.Bridge.SafeStats()
+	for _, s := range stats.NATS {
+		require.True(t, s.Connected, "cluster %s should be connected", s.Name)
+	}
+	for _, c := range stats.Connections {
+		if c.NATSConnection == TestCellName {
+			require.False(t, c.Connected, "misconfigured connector should not be running")
+		} else {
+			require.True(t, c.Connected, "default cell connector should be running")
+		}
+	}
+
+	tbs.Bridge.reconnectLock.Lock()
+	require.Len(t, tbs.Bridge.reconnect, 1, "misconfigured connector should be queued for retry")
+	tbs.Bridge.reconnectLock.Unlock()
+
+	_, err = tbs.JS.Publish(subject, []byte("default-cell-works"))
+	require.NoError(t, err)
+	received := readMessagesFromTopic(t, tbs, topic, 1)
+	require.Equal(t, []string{"default-cell-works"}, received)
+}
+
 func TestMultiCellUnknownClusterFailsStart(t *testing.T) {
 	config := conf.DefaultBridgeConfig()
 	config.Logging.Colors = false

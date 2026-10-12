@@ -268,10 +268,13 @@ func (server *NATSKafkaBridge) startConnectors() error {
 	for _, c := range server.connectors {
 		if err := c.Start(); err != nil {
 			cluster := c.NATSConnection()
-			if cluster != "" && !server.CheckNATSFor(cluster) {
-				// an unreachable named cluster only delays its own
-				// connectors, the reconnect timer keeps dialing it
-				server.logger.Noticef("error starting %s, will retry when its cluster is reachable, %s", c.String(), err.Error())
+			if cluster != "" {
+				// a failing connector on a named cluster only delays itself,
+				// whether the cluster is unreachable or reachable but
+				// misconfigured (e.g. a missing stream or denied permission);
+				// the reconnect timer keeps retrying it so the other
+				// clusters' connectors keep running
+				server.logger.Errorf("error starting %s, will retry, %s", c.String(), err.Error())
 				server.reconnectLock.Lock()
 				server.reconnect[c.ID()] = c
 				server.ensureReconnectTimer()

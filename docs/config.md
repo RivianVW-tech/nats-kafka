@@ -205,6 +205,8 @@ Notes:
 * `connecttimeout`, `reconnectwait`, `maxreconnects` and `clientname` default to the values from the `nats` block when not set on a cluster entry.
 * The cluster name is appended to the client connection name, e.g. `NATS Kafka Bridge [cell-b]`.
 * At startup the default cluster must be reachable, but a named cluster that is not only delays its own connectors; the bridge starts and keeps dialing it.
+* A connector on a named cluster that fails to start for any other reason (e.g. a missing stream or denied permission) is also retried on the reconnect interval instead of failing the bridge, so a misconfigured cluster cannot take down the others.
+Connectors on the default cluster still fail the bridge at startup.
 * The bridge only exits when the default cluster's connection is permanently closed.
 A named cluster that becomes unreachable only stops its own connectors; they restart automatically when the cluster is reachable again.
 For that reason set `maxreconnects: -1` in multi-cluster deployments so the NATS clients keep retrying.
