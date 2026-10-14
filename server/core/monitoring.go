@@ -227,6 +227,7 @@ func (server *NATSKafkaBridge) stats() BridgeStats {
 	stats.StartTime = server.startTime.Unix()
 	stats.UpTime = now.Sub(server.startTime).String()
 	stats.ServerTime = now.Unix()
+	stats.NATS = server.natsConnectionStats()
 
 	for _, connector := range server.connectors {
 		cstats := connector.Stats()

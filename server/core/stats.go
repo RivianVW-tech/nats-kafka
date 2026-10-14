@@ -23,20 +23,30 @@ import (
 
 // BridgeStats wraps the current status of the bridge and all of its connectors
 type BridgeStats struct {
-	StartTime    int64            `json:"start_time"`
-	ServerTime   int64            `json:"current_time"`
-	UpTime       string           `json:"uptime"`
-	RequestCount int64            `json:"request_count"`
-	Connections  []ConnectorStats `json:"connectors"`
-	HTTPRequests map[string]int64 `json:"http_requests"`
+	StartTime    int64                 `json:"start_time"`
+	ServerTime   int64                 `json:"current_time"`
+	UpTime       string                `json:"uptime"`
+	RequestCount int64                 `json:"request_count"`
+	NATS         []NATSConnectionStats `json:"nats"`
+	Connections  []ConnectorStats      `json:"connectors"`
+	HTTPRequests map[string]int64      `json:"http_requests"`
+}
+
+// NATSConnectionStats captures the connection state for one NATS cluster (cell)
+type NATSConnectionStats struct {
+	Name         string `json:"name"`
+	Connected    bool   `json:"connected"`
+	ConnectedURL string `json:"connected_url,omitempty"`
 }
 
 // ConnectorStats captures the statistics for a single connector
 // times are in nanoseconds, use a holder to get the protection
 // of a lock and to fill in the quantiles
 type ConnectorStats struct {
-	Name          string  `json:"name"`
-	ID            string  `json:"id"`
+	Name           string `json:"name"`
+	ID             string `json:"id"`
+	NATSConnection string `json:"nats_connection,omitempty"`
+
 	Connected     bool    `json:"connected"`
 	Connects      int64   `json:"connects"`
 	Disconnects   int64   `json:"disconnects"`
@@ -76,6 +86,14 @@ func NewConnectorStatsHolder(name string, id string) *ConnectorStatsHolder {
 // Name returns the name the holder was created with
 func (stats *ConnectorStatsHolder) Name() string {
 	return stats.stats.Name
+}
+
+// SetNATSConnection records the NATS cluster the connector is bound to
+// locks/unlocks the stats
+func (stats *ConnectorStatsHolder) SetNATSConnection(cluster string) {
+	stats.Lock()
+	stats.stats.NATSConnection = cluster
+	stats.Unlock()
 }
 
 // ID returns the ID the holder was created with

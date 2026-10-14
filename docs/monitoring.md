@@ -15,12 +15,21 @@ The `/varz` endpoint returns a JSON encoded set of statistics for the server. Th
 * `current_time` - the current time, in the bridge's timezone.
 * `uptime` - a string representation of the server's up time.
 * `http_requests` - a map of request paths to counts, the keys are `/`, `/varz` and `/healthz`.
+* `nats` - an array with the connection state of each NATS cluster (cell), sorted by name.
 * `connectors` - an array of statistics for each connector.
+
+Each object in the nats array, one per configured cluster, will contain the following properties:
+
+* `name` - the cluster name, `default` for the `nats` config block.
+* `connected` - true when the bridge currently has an established connection to the cluster.
+* `connected_url` - the server URL the bridge is connected to, omitted while disconnected.
 
 Each object in the connectors array, one per connector, will contain the following properties:
 
 * `name` - the name of the connector, a human readable description of the connector.
+Connectors bound to a named NATS cluster are prefixed with the cluster name in brackets.
 * `id` - the connectors id, either set in the configuration or generated at runtime.
+* `nats_connection` - the named NATS cluster the connector is bound to, omitted for the default cluster.
 * `connects` - a count of the number of times the connector has connected.
 * `disconnects` -  a count of the number of times the connector has disconnected.
 * `bytes_in` - the number of bytes the connector has received, may differ from received due to headers and encoding.
